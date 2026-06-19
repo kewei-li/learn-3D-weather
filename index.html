@@ -173,12 +173,18 @@ Cesium.createOsmBuildingsAsync()
   .then(function(b){ osmBuildings=b; scene.primitives.add(b); })
   .catch(function(e){ console.warn("OSM Buildings 加载失败:",e); });
 
-/* 隐藏 loading（地形 provider 就绪后） */
+/* 隐藏 loading（地形就绪后）。防呆：缺 token / 慢网 / 地形出错时绝不卡死在这一屏。 */
+function hideLoading(){const l=document.getElementById('loading'); if(l){l.style.opacity=0;setTimeout(()=>{const x=document.getElementById('loading');if(x)x.remove();},650);}}
 viewer.scene.globe.tileLoadProgressEvent.addEventListener(function once(n){
-  if(n===0){const l=document.getElementById('loading');
-    if(l){l.style.opacity=0;setTimeout(()=>l.remove(),650);} // 防御：若已被移除则跳过
-    viewer.scene.globe.tileLoadProgressEvent.removeEventListener(once);}
+  if(n===0){hideLoading(); viewer.scene.globe.tileLoadProgressEvent.removeEventListener(once);}
 });
+// 缺 token：直接在 loading 屏说明白(不要让人对着"streaming terrain…"干等)
+if(!Cesium.Ion.defaultAccessToken){
+  const l=document.getElementById('loading');
+  if(l) l.innerHTML='Missing Cesium ion token<br><span style="font-size:.78em;opacity:.65;letter-spacing:.04em">set CESIUM_ION_TOKEN on your host — see README</span>';
+}
+// 兜底：12s 后无论如何揭开 loading（坏 token / 地形流失败也不白屏卡死）
+setTimeout(hideLoading, 12000);
 
 /* 相机：站在市中心，北望群山。HOME_VIEW 是"最佳观测角度"的唯一真源（初始 + 复位共用）。 */
 const HOME_VIEW={

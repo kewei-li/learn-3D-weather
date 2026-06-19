@@ -1,5 +1,6 @@
-config.js
+/config.js
 node_modules/
+.vercel/
 .DS_Store
 .gstack/
 weather-live.zip

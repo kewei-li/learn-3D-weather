@@ -20,7 +20,20 @@ npm start        # → python3 -m http.server 8080
 ```bash
 cp config.example.js config.js   # 然后在 config.js 填入你的 Cesium ion token
 ```
-（本仓库的 `config.js` 已含一个可用 token，且被 `.gitignore` 忽略。公开部署请换 ion 受限 token。）
+（`config.js` 含真实 token，被 `.gitignore` 忽略，不进仓库。）
+
+## 部署 / Deploy (Vercel)
+
+`config.js` 不在仓库里，所以**部署端必须另给 token**，否则页面会卡在 “streaming terrain…”（缺 token → 地形 401 → 不流）。
+本仓库已配好免提交的安全做法：
+
+1. Vercel → 项目 → **Settings → Environment Variables** 添加 `CESIUM_ION_TOKEN`（填你的 ion token），保存。
+2. 重新部署（Redeploy）。
+
+原理：`vercel.json` 把 `/config.js` 重写到 serverless 函数 [`api/config.js`](api/config.js)，该函数从 `CESIUM_ION_TOKEN`
+环境变量吐出 `window.CESIUM_ION_TOKEN`。token 只存在 Vercel 环境变量里，**不进公开仓库**。本地开发仍用根目录的 `config.js` 文件（同一个 `<script src="config.js">` 两边都能用）。
+⚠️ 客户端 token 对任何打开页面的人可见 → 公开站请在 ion 后台建**受限 token**（只授权 World Terrain + OSM Buildings，并锁定域名）。
+> 想图省事也可以直接把 token 提交进仓库（公开仓库不推荐，会被扫号机器人盗刷免费额度）。
 
 ## 目录
 
