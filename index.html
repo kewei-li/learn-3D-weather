@@ -47,7 +47,7 @@
   .pill.on{background:rgba(255,255,255,.13);border-color:rgba(255,255,255,.22);}
   .pill .ic{width:22px;height:22px;}
   .pill .nm{font-size:11px;font-weight:600;}
-  .pill .en{font-family:var(--mono);font-size:9px;color:var(--ink-dim);letter-spacing:.04em;text-transform:uppercase;}
+  .pill .en{display:none;} /* 单语言：pill 只显示当前语言的主标(.nm)，不再叠另一种语言 */
   .sep{width:1px;height:36px;background:var(--glass-line);flex:0 0 auto;}
   .ctlbox{display:flex;flex-direction:column;gap:7px;min-width:124px;}
   .ctlbox .lab{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--ink-dim);letter-spacing:.03em;}
@@ -105,7 +105,7 @@
 <body>
 <div id="cesiumContainer"></div>
 <div id="loading">streaming terrain…</div>
-<div id="langtog" role="group" aria-label="Language"><button type="button" data-l="en" class="on" aria-pressed="true">EN</button><button type="button" data-l="zh" aria-pressed="false">中</button></div>
+<div id="langtog" role="group" aria-label="Language"><button type="button" data-l="en" class="on" aria-pressed="true">EN</button><button type="button" data-l="zh" aria-pressed="false">ZH</button></div>
 <div id="head"><h1 id="h-title">Thunderstorm · North Shore</h1><div class="s" id="h-sub">THUNDERSTORM · Cesium World Terrain</div></div>
 <div id="note"><b>Real Earth · real terrain</b><br>Pick a phenomenon below<br>or tap LIVE for right now</div>
 <div id="dock" role="toolbar" aria-label="Weather controls">
@@ -597,16 +597,17 @@ const I18N={
     intensity:"Intensity", day:"Day", night:"Night",
     liveIdle:"Live off · Open-Meteo", liveBtn:"⟳ LIVE", liveOn:"⏸ LIVE ON", liveLoading:"loading…", liveFail:"failed · see console",
     wind:"wind ", recenter:"Re-center to best vantage", front:{cold:"Cold",warm:"Warm"},
+    langLabels:{en:"EN",zh:"ZH"}, codePrefix:"code ",
     pills:{storm:"Storm",snow:"Snow",fog:"Fog",dust:"Haboob",tornado:"Tornado",front:"Front"},
     titles:{storm:"Thunderstorm · North Shore",snow:"Heavy Snow · North Shore",fog:"Dense Fog · visibility drop",dust:"Haboob · wall of dust",tornado:"Tornado · vortex field",front_cold:"Cold Front · passing",front_warm:"Warm Front · passing"},
     wmo:{0:"Clear",1:"Mostly clear",2:"Partly cloudy",3:"Overcast",45:"Fog",48:"Rime fog",51:"Drizzle",53:"Drizzle",55:"Drizzle",56:"Freezing drizzle",57:"Freezing drizzle",61:"Light rain",63:"Rain",65:"Heavy rain",66:"Freezing rain",67:"Freezing rain",71:"Light snow",73:"Snow",75:"Heavy snow",77:"Snow grains",80:"Showers",81:"Showers",82:"Violent showers",85:"Snow showers",86:"Heavy snow showers",95:"Thunderstorm",96:"T-storm, hail",99:"T-storm, hail"}
   },
   zh:{
-    docTitle:"天气现场 · Cesium 真实地球", loading:"加载真实地形中…",
-    note:["真实地球 · 真实地形","下方挑一种天气","或点 LIVE 看此刻实况"], sub:"真实地形 · OSM 三维建筑",
-    intensity:"强度 Intensity", day:"白天", night:"夜晚",
-    liveIdle:"实况未开 · Open-Meteo", liveBtn:"⟳ 实况 LIVE", liveOn:"⏸ 实况 ON", liveLoading:"查询中…", liveFail:"获取失败 · 看 console",
-    wind:"风", recenter:"复位到最佳观测角度", front:{cold:"冷锋",warm:"暖锋"},
+    docTitle:"天气现场 · 真实地球", loading:"加载真实地形中…",
+    note:["真实地球 · 真实地形","下方挑一种天气","或开实况看此刻天气"], sub:"真实地形 · 三维建筑",
+    intensity:"强度", day:"白天", night:"夜晚",
+    liveIdle:"实况未开", liveBtn:"⟳ 看实况", liveOn:"⏸ 实况中", liveLoading:"查询中…", liveFail:"获取失败 · 看控制台",
+    wind:"风", recenter:"复位到最佳观测角度", front:{cold:"冷锋",warm:"暖锋"}, langLabels:{en:"英",zh:"中"}, codePrefix:"天气码 ",
     pills:{storm:"雷暴",snow:"大雪",fog:"浓雾",dust:"沙尘暴",tornado:"龙卷",front:"锋面"},
     titles:{storm:"雷暴 · 温哥华北岸",snow:"大雪 · 温哥华北岸",fog:"浓雾 · 能见度骤降",dust:"沙尘暴 · 沙墙压境",tornado:"龙卷 · 涡旋风场",front_cold:"冷锋过境",front_warm:"暖锋过境"},
     wmo:{0:"晴",1:"晴间多云",2:"多云",3:"阴",45:"雾",48:"雾凇",51:"毛毛雨",53:"毛毛雨",55:"毛毛雨",56:"冻毛雨",57:"冻毛雨",61:"小雨",63:"中雨",65:"大雨",66:"冻雨",67:"冻雨",71:"小雪",73:"中雪",75:"大雪",77:"米雪",80:"阵雨",81:"阵雨",82:"强阵雨",85:"阵雪",86:"强阵雪",95:"雷暴",96:"雷暴冰雹",99:"雷暴冰雹"}
@@ -617,28 +618,29 @@ function otherLang(){return lang==='en'?'zh':'en';}
 let lastLive=null; // 最近一次实况结果，切语言时重渲染状态行
 
 function applyLang(l){
-  lang=l; const t=I18N[l], o=I18N[otherLang()];
+  lang=l; const t=I18N[l];
   document.documentElement.lang = l==='zh'?'zh':'en';
   document.title=t.docTitle;
   const ld=document.getElementById('loading'); if(ld) ld.textContent=t.loading;
   document.getElementById('note').innerHTML=`<b>${t.note[0]}</b><br>${t.note[1]}<br>${t.note[2]}`;
   document.querySelector('.ctlbox .lab span').textContent=t.intensity;
   document.querySelectorAll('#dn button').forEach(b=>{ b.textContent = b.dataset.d==='day'?t.day:t.night; });
-  document.querySelectorAll('#pills .pill').forEach(p=>{ const k=p.dataset.p;
-    p.querySelector('.nm').textContent=t.pills[k]; p.querySelector('.en').textContent=o.pills[k]; });
+  document.querySelectorAll('#pills .pill').forEach(p=>{ p.querySelector('.nm').textContent=t.pills[p.dataset.p]; }); // 只渲当前语言
   document.querySelectorAll('#fronttog button').forEach(b=>{ b.textContent = b.dataset.ft==='cold'?t.front.cold:t.front.warm; });
   const rc=document.getElementById('recenter'); rc.title=t.recenter; rc.setAttribute('aria-label',t.recenter);
   updateHead();
   const btn=document.getElementById('liveBtn'); if(!btn.disabled) btn.textContent = liveTimer? t.liveOn : t.liveBtn;
   document.getElementById('liveStat').textContent=liveStatText();
-  document.querySelectorAll('#langtog button').forEach(b=>{const on=b.dataset.l===l;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on?'true':'false');});
+  document.querySelectorAll('#langtog button').forEach(b=>{const on=b.dataset.l===l;
+    b.textContent=t.langLabels[b.dataset.l]; // 切换器标签也随语言(英模式 EN/ZH，中模式 英/中)，每模式单语言
+    b.classList.toggle('on',on);b.setAttribute('aria-pressed',on?'true':'false');});
 }
 
 // 由最近实况 + 当前语言渲染状态行（无实况则显示离线文案）
 function liveStatText(){
   const t=I18N[lang];
   if(!lastLive) return t.liveIdle;
-  const r=lastLive, nm=t.wmo[r.debug.code]??('code '+r.debug.code);
+  const r=lastLive, nm=t.wmo[r.debug.code]??(t.codePrefix+r.debug.code);
   const tmp=(r.debug.temp!=null)?Math.round(r.debug.temp)+'°':'--';
   const wnd=(r.wind&&r.wind.speed!=null)?' · '+t.wind+Math.round(r.wind.speed):'';
   return `${nm} · ${r._pct}% · ${tmp}${wnd} · ${r._time}`;
