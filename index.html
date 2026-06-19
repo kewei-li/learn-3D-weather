@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Weather, live · Cesium Earth</title>
+<script src="https://cesium.com/downloads/cesiumjs/releases/1.142/Build/Cesium/Cesium.js"></script>
+<link href="https://cesium.com/downloads/cesiumjs/releases/1.142/Build/Cesium/Widgets/widgets.css" rel="stylesheet"/>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--ink:#f1f4f7;--ink-dim:rgba(240,244,248,.6);--glass:rgba(20,24,30,.46);--glass-line:rgba(255,255,255,.14);
+    --sans:'Archivo','PingFang SC','Microsoft YaHei',sans-serif;--mono:'Spline Sans Mono',ui-monospace,monospace;}
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body,#cesiumContainer{width:100%;height:100%;overflow:hidden;background:#000;font-family:var(--sans);}
+  .cesium-widget-credits{font-size:9px!important;opacity:.5;}
+  #head{position:fixed;top:16px;left:18px;z-index:10;pointer-events:none;color:var(--ink);text-shadow:0 2px 16px rgba(0,0,0,.7);}
+  #head h1{font-size:15px;font-weight:700;}
+  #head .s{font-family:var(--mono);font-size:10px;color:var(--ink-dim);letter-spacing:.07em;margin-top:3px;text-transform:uppercase;}
+  #note{position:fixed;right:14px;top:48px;z-index:10;max-width:210px;text-align:right;color:rgba(255,255,255,.55);
+    font-family:var(--mono);font-size:9px;line-height:1.6;text-shadow:0 1px 8px rgba(0,0,0,.8);pointer-events:none;}
+  #langtog{position:fixed;right:14px;top:12px;z-index:11;display:flex;gap:2px;padding:3px;border-radius:9px;
+    background:var(--glass);border:1px solid var(--glass-line);
+    backdrop-filter:blur(20px) saturate(1.2);-webkit-backdrop-filter:blur(20px) saturate(1.2);box-shadow:0 10px 26px -16px rgba(0,0,0,.8);}
+  #langtog button{font-family:var(--mono);font-size:10px;color:var(--ink-dim);background:none;border:none;padding:4px 8px;border-radius:6px;cursor:pointer;transition:.16s;}
+  #langtog button:hover{color:var(--ink);}
+  #langtog button.on{background:rgba(255,255,255,.18);color:var(--ink);}
+  #note b{color:rgba(255,255,255,.8);}
+  #dock{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:10;display:flex;align-items:center;gap:13px;
+    padding:9px 11px;background:var(--glass);border:1px solid var(--glass-line);border-radius:15px;color:var(--ink);
+    backdrop-filter:blur(20px) saturate(1.2);-webkit-backdrop-filter:blur(20px) saturate(1.2);box-shadow:0 18px 50px -22px rgba(0,0,0,.85);}
+  .pills{display:flex;gap:5px;}
+  .pill{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:7px 11px 6px;border-radius:10px;border:1px solid transparent;transition:.16s;min-width:58px;}
+  .pill:hover{background:rgba(255,255,255,.06);}
+  .pill.on{background:rgba(255,255,255,.13);border-color:rgba(255,255,255,.22);}
+  .pill .ic{width:22px;height:22px;}
+  .pill .nm{font-size:11px;font-weight:600;}
+  .pill .en{font-family:var(--mono);font-size:7.5px;color:var(--ink-dim);letter-spacing:.05em;text-transform:uppercase;}
+  .sep{width:1px;height:36px;background:var(--glass-line);}
+  .ctlbox{display:flex;flex-direction:column;gap:6px;min-width:120px;}
+  .ctlbox .lab{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;color:var(--ink-dim);letter-spacing:.04em;}
+  input[type=range]{-webkit-appearance:none;width:100%;height:3px;border-radius:2px;background:linear-gradient(90deg,#fff 0%,#fff var(--p,70%),rgba(255,255,255,.22) var(--p,70%));outline:none;cursor:pointer;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.25);cursor:pointer;}
+  .daynight{display:flex;background:rgba(255,255,255,.08);border-radius:8px;padding:3px;gap:2px;}
+  .daynight button{font-family:var(--mono);font-size:9.5px;color:var(--ink-dim);background:none;border:none;padding:5px 9px;border-radius:6px;cursor:pointer;}
+  .daynight button.on{background:rgba(255,255,255,.18);color:var(--ink);}
+  .livebox{display:flex;flex-direction:column;gap:6px;min-width:96px;}
+  #liveBtn{font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--ink);cursor:pointer;
+    background:rgba(255,255,255,.10);border:1px solid var(--glass-line);border-radius:9px;padding:8px 10px;transition:.16s;}
+  #liveBtn:hover{background:rgba(255,255,255,.17);}
+  #liveBtn:disabled{opacity:.55;cursor:default;}
+  #liveBtn.live{background:rgba(118,200,142,.22);border-color:rgba(118,200,142,.5);}
+  #liveStat{font-family:var(--mono);font-size:8.5px;color:var(--ink-dim);text-align:center;line-height:1.5;}
+  #recenter{position:fixed;right:16px;bottom:16px;z-index:10;width:42px;height:42px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink);
+    background:var(--glass);border:1px solid var(--glass-line);
+    backdrop-filter:blur(20px) saturate(1.2);-webkit-backdrop-filter:blur(20px) saturate(1.2);
+    box-shadow:0 12px 30px -14px rgba(0,0,0,.8);transition:.16s;}
+  #recenter:hover{background:rgba(255,255,255,.15);}
+  #recenter:active{transform:scale(.93);}
+  #recenter svg{width:20px;height:20px;}
+  #fronttog{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);z-index:10;display:none;gap:2px;padding:3px;border-radius:9px;
+    background:var(--glass);border:1px solid var(--glass-line);
+    backdrop-filter:blur(20px) saturate(1.2);-webkit-backdrop-filter:blur(20px) saturate(1.2);box-shadow:0 10px 26px -16px rgba(0,0,0,.8);}
+  #fronttog button{font-family:var(--mono);font-size:10px;color:var(--ink-dim);background:none;border:none;padding:5px 13px;border-radius:6px;cursor:pointer;transition:.16s;}
+  #fronttog button:hover{color:var(--ink);}
+  #fronttog button.on{background:rgba(255,255,255,.18);color:var(--ink);}
+  #loading{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;background:#070a0f;color:var(--ink-dim);font-family:var(--mono);font-size:12px;letter-spacing:.08em;transition:opacity .6s;}
+</style>
+</head>
+<body>
+<div id="cesiumContainer"></div>
+<div id="loading">streaming terrain…</div>
+<div id="langtog"><button data-l="en" class="on">EN</button><button data-l="zh">中</button></div>
+<div id="head"><h1 id="h-title">Thunderstorm · North Shore</h1><div class="s" id="h-sub">THUNDERSTORM · Cesium World Terrain</div></div>
+<div id="note"><b>Real Earth + real terrain</b><br>density/wind ← HRRR·MRMS hooks (reserved)<br>one engine, the whole JetStream list</div>
+<div id="dock">
+  <div class="pills" id="pills">
+    <div class="pill on" data-p="storm"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a4 4 0 0 1 1-7.8A5.5 5.5 0 0 1 17 6a3.5 3.5 0 0 1 .5 7"/><path d="M12 12l-2 4h3l-2 4"/></svg><span class="nm">Storm</span><span class="en">雷暴</span></div>
+    <div class="pill" data-p="snow"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M5 7l14 10M19 7L5 17"/></svg><span class="nm">Snow</span><span class="en">大雪</span></div>
+    <div class="pill" data-p="fog"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M3 9h18M4 13h16M3 17h18M5 21h14"/></svg><span class="nm">Fog</span><span class="en">浓雾</span></div>
+    <div class="pill" data-p="dust"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M3 8c3-2 6 2 9 0s6-2 9 0M3 13c3-2 6 2 9 0s6-2 9 0M3 18c3-2 6 2 9 0s6-2 9 0"/></svg><span class="nm">Haboob</span><span class="en">沙尘暴</span></div>
+    <div class="pill" data-p="tornado"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16M6 9h12M9 13h7M11 17h4M13 21l-1-4"/></svg><span class="nm">Tornado</span><span class="en">龙卷</span></div>
+    <div class="pill" data-p="front"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 14h20"/><path d="M5.5 14l2.5-4 2.5 4z" fill="currentColor" stroke="none"/><path d="M12.5 14l2.5-4 2.5 4z" fill="currentColor" stroke="none"/></svg><span class="nm">Front</span><span class="en">锋面</span></div>
+  </div>
+  <div class="sep"></div>
+  <div class="ctlbox">
+    <div class="lab"><span>Intensity</span><span id="intV">70%</span></div>
+    <input type="range" id="intensity" min="20" max="100" value="70">
+    <div class="daynight" id="dn"><button data-d="day" class="on">Day</button><button data-d="night">Night</button></div>
+  </div>
+  <div class="sep"></div>
+  <div class="livebox">
+    <button id="liveBtn">⟳ LIVE</button>
+    <div id="liveStat">Offline · Open-Meteo</div>
+  </div>
+</div>
+<button id="recenter" title="Re-center to best vantage">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="6"/><path d="M12 1.5v3.5M12 19v3.5M1.5 12h3.5M19 12h3.5"/></svg>
+</button>
+<div id="fronttog"><button data-ft="cold" class="on">Cold</button><button data-ft="warm">Warm</button></div>
+
+<script src="config.js"></script>
+<script src="src/datasources.js"></script>
+<script>
+/* ============================================================
+   天气现场 · CesiumJS — 一套粒子引擎在真实地球上切换天气
+   生产接入: 把 PRESET 的 density/wind/visibility 换成
+     · 降水强度  ← MRMS / 雷达
+     · 风场      ← HRRR / RAP (updateCallback 里施加)
+     · 能见度    ← METAR (scene.fog.density)
+     · 闪电      ← GLM (在 lat/lon 触发 bolt)
+   ============================================================ */
+
+/* —— 客户端 token：从 config.js 读取（已 gitignore）。公开部署请换 ion 受限 token —— */
+Cesium.Ion.defaultAccessToken = window.CESIUM_ION_TOKEN || "";
+if(!Cesium.Ion.defaultAccessToken){console.warn("缺少 ion token：请复制 config.example.js 为 config.js 并填入 token");}
+
+const LON=-123.115, LAT=49.265, EYE_H=320; // 温哥华市中心北望北岸群山
+
+const viewer=new Cesium.Viewer("cesiumContainer",{
+  terrain:Cesium.Terrain.fromWorldTerrain(),
+  animation:false,timeline:false,baseLayerPicker:false,geocoder:false,homeButton:false,
+  sceneModePicker:false,navigationHelpButton:false,fullscreenButton:false,
+  infoBox:false,selectionIndicator:false
+});
+const scene=viewer.scene, camera=viewer.camera;
+window.viewer=viewer; // 调试句柄：可在 console 检查 camera/scene/primitives
+scene.globe.enableLighting=true;
+scene.globe.depthTestAgainstTerrain=true;
+// 关掉 HDR：开启后其自动曝光会被密集亮色粒子带偏，把整个场景压暗。粒子多的场景关掉更稳。
+scene.highDynamicRange=false;
+viewer.clock.shouldAnimate=false;
+
+/* —— Cesium OSM Buildings：全球 OpenStreetMap 建筑，作为 3D Tiles 流式加载，
+   在 World Terrain 上长出立体楼体（用现有 ion token，免费 asset 96188）。 —— */
+let osmBuildings=null;
+Cesium.createOsmBuildingsAsync()
+  .then(function(b){ osmBuildings=b; scene.primitives.add(b); })
+  .catch(function(e){ console.warn("OSM Buildings 加载失败:",e); });
+
+/* 隐藏 loading（地形 provider 就绪后） */
+viewer.scene.globe.tileLoadProgressEvent.addEventListener(function once(n){
+  if(n===0){const l=document.getElementById('loading');
+    if(l){l.style.opacity=0;setTimeout(()=>l.remove(),650);} // 防御：若已被移除则跳过
+    viewer.scene.globe.tileLoadProgressEvent.removeEventListener(once);}
+});
+
+/* 相机：站在市中心，北望群山。HOME_VIEW 是"最佳观测角度"的唯一真源（初始 + 复位共用）。 */
+const HOME_VIEW={
+  destination:Cesium.Cartesian3.fromDegrees(LON,LAT,EYE_H),
+  orientation:{heading:Cesium.Math.toRadians(348),pitch:Cesium.Math.toRadians(2),roll:0}
+};
+camera.setView(HOME_VIEW);
+/* 复位：平滑飞回最佳观测角度（粒子跟随相机，飞行中天气一直在身边） */
+function recenter(){ camera.flyTo({destination:HOME_VIEW.destination,orientation:HOME_VIEW.orientation,duration:1.4}); }
+document.getElementById('recenter').addEventListener('click',recenter);
+
+/* —— 粒子贴图（canvas → dataURI，无外部依赖）—— */
+function softURI(){const c=document.createElement('canvas');c.width=c.height=64;const x=c.getContext('2d');
+  const g=x.createRadialGradient(32,32,0,32,32,32);g.addColorStop(0,'rgba(255,255,255,1)');g.addColorStop(.5,'rgba(255,255,255,.5)');g.addColorStop(1,'rgba(255,255,255,0)');
+  x.fillStyle=g;x.fillRect(0,0,64,64);return c.toDataURL();}
+function streakURI(){const c=document.createElement('canvas');c.width=16;c.height=48;const x=c.getContext('2d');
+  const g=x.createLinearGradient(0,0,0,48);g.addColorStop(0,'rgba(255,255,255,0)');g.addColorStop(.5,'rgba(255,255,255,.95)');g.addColorStop(1,'rgba(255,255,255,0)');
+  x.fillStyle=g;x.fillRect(5,0,6,48);return c.toDataURL();}
+/* 龙卷噪声贴图：3 个倍频的平滑随机噪声(像翻滚的烟/云)。给漏斗自定义材质做"滚动噪声"采样——
+   材质里把它沿圆周+竖直方向滚动，漏斗表面就翻腾旋转，并用噪声驱动 alpha 做出破碎边缘。 */
+function tornNoiseURI(){
+  function rnd(sz){const c=document.createElement('canvas');c.width=c.height=sz;const x=c.getContext('2d');const d=x.createImageData(sz,sz);
+    for(let i=0;i<sz*sz;i++){const u=Math.random()*255;d.data[i*4]=d.data[i*4+1]=d.data[i*4+2]=u;d.data[i*4+3]=255;}x.putImageData(d,0,0);return c;}
+  const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');x.imageSmoothingEnabled=true;
+  x.globalAlpha=0.55;x.drawImage(rnd(8),0,0,256,256);   // 大尺度平滑
+  x.globalAlpha=0.30;x.drawImage(rnd(20),0,0,256,256);  // 中尺度
+  x.globalAlpha=0.15;x.drawImage(rnd(56),0,0,256,256);  // 细节
+  return c.toDataURL();}
+/* 软云贴图：一堆柔半径渐隐白色团叠成蓬松云块(边缘软)。用 billboard.color 染成暗云墙/褐扬尘。 */
+function cloudURI(){const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');
+  for(let i=0;i<16;i++){const cx=46+Math.random()*164, cy=78+Math.random()*100, r=32+Math.random()*54;
+    const g=x.createRadialGradient(cx,cy,0,cx,cy,r);
+    g.addColorStop(0,'rgba(255,255,255,'+(0.16+Math.random()*0.12).toFixed(3)+')');g.addColorStop(1,'rgba(255,255,255,0)');
+    x.fillStyle=g;x.beginPath();x.arc(cx,cy,r,0,7);x.fill();}
+  return c.toDataURL();}
+const IMG_SOFT=softURI(), IMG_STREAK=streakURI(), TORN_NOISE=tornNoiseURI(), IMG_CLOUD=cloudURI();
+
+/* —— 局地 ENU：用于把“风”施加成世界向量 —— */
+const enu=Cesium.Transforms.eastNorthUpToFixedFrame(Cesium.Cartesian3.fromDegrees(LON,LAT));
+const EAST=Cesium.Matrix4.getColumn(enu,0,new Cesium.Cartesian3());
+Cesium.Cartesian3.normalize(EAST,EAST);
+const NORTH=Cesium.Matrix4.getColumn(enu,1,new Cesium.Cartesian3());
+Cesium.Cartesian3.normalize(NORTH,NORTH);
+
+/* —— 锋面(平移锋)：一道锋面沿 frontMove 扫过场景。frontMove 取"移向东南(来自西北)"。 —— */
+const frontMove=new Cesium.Cartesian3();
+(function(){const b=Cesium.Math.toRadians(168); // 移向 SSE，正对相机机位(heading 348)迎面扫来
+  Cesium.Cartesian3.add(
+    Cesium.Cartesian3.multiplyByScalar(EAST,Math.sin(b),new Cesium.Cartesian3()),
+    Cesium.Cartesian3.multiplyByScalar(NORTH,Math.cos(b),new Cesium.Cartesian3()),frontMove);
+  Cesium.Cartesian3.normalize(frontMove,frontMove);})();
+let frontType='cold';        // 'cold' | 'warm'
+let frontPhase=0;            // 0..1 过境循环相位
+let frontDCam=6000;          // 锋面到相机的有符号距离(米)：>0 锋前(未到)，<0 锋后(已过)
+let frontProf=0;             // 当前降水带强度 0..1（供闪电门控 + 云墙材质）
+const frontWind={E:0,N:0};   // 锋面风(随锋前/锋后切变)
+const FRONT_CYCLE=34;        // 一次过境循环秒数
+const FRONT_R=6000;          // 扫掠半程(米)
+// 降水带廓线：冷锋窄而强(峰在锋后 d≈-350)，暖锋宽而缓(峰在锋前 d≈+1600)
+function bandProfile(d,type){
+  if(type==='cold'){const x=(d+350)/650; return Math.exp(-x*x);}
+  const x=(d-1600)/2200; return 0.85*Math.exp(-x*x);
+}
+
+/* —— 龙卷(世界锚定·会移动会旋转的漏斗，相机在外面看) —— tornadoBase 是地面锚点，沿 tornTrack 正弦往返横扫。 */
+const _siteG=Cesium.Cartesian3.fromDegrees(LON,LAT,0);
+const _fwd=new Cesium.Cartesian3();
+(function(){const b=Cesium.Math.toRadians(348); // 沿视线(机位 heading 348)向前
+  Cesium.Cartesian3.add(Cesium.Cartesian3.multiplyByScalar(EAST,Math.sin(b),new Cesium.Cartesian3()),
+    Cesium.Cartesian3.multiplyByScalar(NORTH,Math.cos(b),new Cesium.Cartesian3()),_fwd);
+  Cesium.Cartesian3.normalize(_fwd,_fwd);})();
+const tornBase0=Cesium.Cartesian3.add(_siteG,Cesium.Cartesian3.multiplyByScalar(_fwd,2000,new Cesium.Cartesian3()),new Cesium.Cartesian3());
+const tornTrack=new Cesium.Cartesian3();
+(function(){const b=Cesium.Math.toRadians(78); // ≈垂直视线，左右横扫(横向视差最大)
+  Cesium.Cartesian3.add(Cesium.Cartesian3.multiplyByScalar(EAST,Math.sin(b),new Cesium.Cartesian3()),
+    Cesium.Cartesian3.multiplyByScalar(NORTH,Math.cos(b),new Cesium.Cartesian3()),tornTrack);
+  Cesium.Cartesian3.normalize(tornTrack,tornTrack);})();
+let tornadoBase=null;                 // 世界锚点(仅 tornado 时非 null)：forceFactory 涡旋轴 + 漏斗实体都读它
+const tornadoUp=new Cesium.Cartesian3();
+const tornadoCarto=new Cesium.Cartographic();
+const tornQuat=Cesium.Quaternion.clone(Cesium.Quaternion.IDENTITY); // 漏斗朝向(随 tornSpin 自转)
+const _tornHPR=new Cesium.HeadingPitchRoll(0,0,0);
+let tornadoT=0, tornSpin=0;
+const _tA=new Cesium.Cartesian3(), _tmpA=new Cesium.Cartesian3(), _tmpB=new Cesium.Cartesian3();
+const TORN_AMP=1200;     // 横扫半幅(米)
+const TORN_W=0.018;      // 平移角频(rad/s) → 峰速 ~22 m/s
+const TORN_OMEGA=1.6;    // 漏斗面自转(rad/s, ~4s/圈，远处清晰可辨)
+const EMIT_R=60;         // 底部碎屑发射盘半径
+const FUNNEL_TOP=1100;   // 漏斗总高(米)
+const N_RINGS=5;
+const TR0=30, TR1=300, TPOW=1.8; // 锥度：窄柄(底)→喇叭口(云底)，凹形(pow>1 → 下细上粗)
+function funnelR(h){const u=Math.min(Math.max(h/FUNNEL_TOP,0),1);return TR0+(TR1-TR0)*Math.pow(u,TPOW);}
+
+/* —— 力场 updateCallback —— */
+const down=new Cesium.Cartesian3(), wind=new Cesium.Cartesian3();
+// 涡旋场临时向量
+const vRel=new Cesium.Cartesian3(), vUp=new Cesium.Cartesian3(), vR=new Cesium.Cartesian3(), vT=new Cesium.Cartesian3();
+let liveWind=null; // {E,N} m/s（实况风），null=用预设风
+function forceFactory(P){
+  return function(p,dt){
+    // 重力（指向地心）
+    Cesium.Cartesian3.normalize(p.position,down);
+    Cesium.Cartesian3.multiplyByScalar(down,P.gravity*dt,down);
+    Cesium.Cartesian3.add(p.velocity,down,p.velocity);
+    // 水平风：实况风覆盖预设风（东向 * windE + 北向 * windN）+ 摆动
+    const t=performance.now()*0.001;
+    const baseE=liveWind?liveWind.E:(P.front?frontWind.E:P.windE), baseN=liveWind?liveWind.N:(P.front?frontWind.N:P.windN);
+    const we=baseE+Math.sin(t*1.3+p.position.x*0.01)*P.turb;
+    const wn=baseN;
+    Cesium.Cartesian3.multiplyByScalar(EAST,we*dt,wind);
+    Cesium.Cartesian3.add(p.velocity,wind,p.velocity);
+    Cesium.Cartesian3.multiplyByScalar(NORTH,wn*dt,wind);
+    Cesium.Cartesian3.add(p.velocity,wind,p.velocity);
+    // 涡旋场（绕"过 tornadoBase 的世界竖直轴"的切向速度 · Rankine）：碎屑绕柱螺旋上升
+    if(P.vortex && tornadoBase){
+      Cesium.Cartesian3.subtract(p.position,tornadoBase,vRel); // 相对世界锚点，不再是相机
+      Cesium.Cartesian3.clone(tornadoUp,vUp);                  // 整柱共用一根竖直轴(否则远端轴歪→旋涡糊)
+      const hAbove=Cesium.Cartesian3.dot(vRel,vUp);
+      Cesium.Cartesian3.multiplyByScalar(vUp,hAbove,vR);
+      Cesium.Cartesian3.subtract(vRel,vR,vR);               // vR = 水平径向分量
+      const rad=Cesium.Cartesian3.magnitude(vR);
+      if(rad>1){
+        Cesium.Cartesian3.divideByScalar(vR,rad,vR);        // 径向单位向量
+        Cesium.Cartesian3.cross(vUp,vR,vT);                 // 切向（逆时针）
+        const Rc=P.vortex.core;
+        const vt=rad<Rc?P.vortex.omega*rad:P.vortex.omega*Rc*Rc/rad; // Rankine 廓线
+        Cesium.Cartesian3.multiplyByScalar(vT,vt*dt,vT);
+        Cesium.Cartesian3.add(p.velocity,vT,p.velocity);
+        // 把粒子约束到漏斗锥面 rT(随高度增大)：外侧吸回、内侧轻推外，碎屑贴着漏斗走
+        const rT=funnelR(Math.max(0,hAbove));
+        const radialF=(rad>rT? -P.vortex.inflow : P.vortex.inflow*0.5)*dt;
+        Cesium.Cartesian3.multiplyByScalar(vR,radialF,vR);
+        Cesium.Cartesian3.add(p.velocity,vR,p.velocity);
+        Cesium.Cartesian3.multiplyByScalar(vUp,P.vortex.lift*dt,vUp);  // 沿柱轴上抬(lift>gravity 才能爬升)
+        Cesium.Cartesian3.add(p.velocity,vUp,p.velocity);
+      }
+    }
+  };
+}
+
+/* —— 预设：同一引擎的不同参数 —— */
+const PRESETS={
+  storm:{title:'雷暴 · 温哥华北岸',sub:'THUNDERSTORM · Cesium World Terrain',
+    img:IMG_STREAK,size:[7,22],radius:1400,rate:6000,life:6,
+    speed:[8,14],gravity:-1400,windE:9,windN:-3,turb:6,
+    color0:[.7,.78,.9,0],color1:[.72,.8,.92,.95],
+    fog:0.0016,sky:{h:0,s:-0.2,b:-0.45},bg:'#39434d',lightning:true},
+  snow:{title:'大雪 · 温哥华北岸',sub:'SNOW · Cesium World Terrain',
+    img:IMG_SOFT,size:[10,16],radius:900,rate:2600,life:11,
+    speed:[1,3],gravity:-70,windE:4,windN:1,turb:14,
+    color0:[1,1,1,0],color1:[1,1,1,.95],
+    fog:0.0030,sky:{h:0,s:-0.4,b:0.15},bg:'#c9d4dd',lightning:false},
+  fog:{title:'浓雾 · 能见度骤降',sub:'FOG · Cesium World Terrain',
+    img:IMG_SOFT,size:[40,60],radius:700,rate:900,life:14,
+    speed:[0,1],gravity:-6,windE:1.5,windN:.5,turb:4,
+    color0:[.92,.93,.94,0],color1:[.93,.94,.95,.5],
+    fog:0.0120,sky:{h:0,s:-0.7,b:0.05},bg:'#cdd1d4',lightning:false},
+  dust:{title:'沙尘暴 · 沙墙压境',sub:'HABOOB · Cesium World Terrain',
+    img:IMG_SOFT,size:[16,30],radius:1300,rate:5200,life:8,
+    speed:[10,18],gravity:-120,windE:26,windN:-6,turb:10,
+    color0:[.85,.66,.42,0],color1:[.84,.6,.34,.85],
+    fog:0.0070,sky:{h:0.05,s:0.2,b:-0.25},bg:'#a8783f',lightning:false},
+  tornado:{title:'龙卷 · 涡旋风场',sub:'TORNADO · Cesium World Terrain',
+    img:IMG_SOFT,size:[12,20],radius:1200,rate:2600,life:5,
+    speed:[5,10],gravity:-6,windE:0,windN:0,turb:4,
+    color0:[.42,.38,.34,0],color1:[.34,.30,.27,.55],
+    fog:0.0015,sky:{h:0,s:-0.15,b:-0.18},bg:'#5a564f',lightning:false,
+    vortex:{omega:1.6,core:90,inflow:10,lift:20}},
+  front:{title:'锋面过境',sub:'FRONT · Cesium World Terrain',
+    img:IMG_STREAK,size:[6,20],radius:1500,rate:6800,life:6,
+    speed:[8,14],gravity:-1300,windE:8,windN:-4,turb:7,
+    color0:[.7,.76,.86,0],color1:[.74,.8,.9,.92],
+    fog:0.0020,sky:{h:0,s:-0.22,b:-0.48},bg:'#2f3a45',lightning:true,
+    front:true}
+};
+let cur='storm', daynight='day', intensity=.7, active=null;
+
+function buildSystem(){
+  if(active){scene.primitives.remove(active);active=null;}
+  const P=PRESETS[cur];
+  active=new Cesium.ParticleSystem({
+    image:P.img,
+    startColor:new Cesium.Color(...P.color0),
+    endColor:new Cesium.Color(...P.color1),
+    startScale:1.0,endScale:1.0,
+    minimumParticleLife:P.life*0.7,maximumParticleLife:P.life,
+    minimumSpeed:P.speed[0],maximumSpeed:P.speed[1],
+    imageSize:new Cesium.Cartesian2(P.size[0],P.size[1]),
+    emissionRate:P.rate*(0.4+intensity*0.8),
+    lifetime:16.0,
+    // 龙卷：底部碎屑盘(CircleEmitter)，粒子从地面盘升起并被涡旋甩成漏斗；其余预设：球发射器
+    emitter:cur==='tornado'?new Cesium.CircleEmitter(EMIT_R):new Cesium.SphereEmitter(P.radius),
+    updateCallback:forceFactory(P)
+  });
+  scene.primitives.add(active);
+  applyMood(P);
+  updateHead();
+  updateFrontUI();
+  updateTornadoUI();
+}
+function updateHead(){
+  let title, sub;
+  if(cur==='front'){ title=I18N[lang].titles['front_'+frontType];
+    sub=(frontType==='cold'?'COLD FRONT':'WARM FRONT')+' · Cesium World Terrain'; }
+  else { title=I18N[lang].titles[cur]; sub=PRESETS[cur].sub; }
+  document.getElementById('h-title').textContent=title;
+  document.getElementById('h-sub').textContent=sub;
+}
+
+function applyMood(P){
+  const nf=daynight==='night';
+  scene.fog.enabled=true;
+  scene.fog.density=P.fog*(nf?1.3:1);
+  if(scene.skyAtmosphere){
+    scene.skyAtmosphere.hueShift=P.sky.h;
+    scene.skyAtmosphere.saturationShift=P.sky.s;
+    scene.skyAtmosphere.brightnessShift=P.sky.b-(nf?0.5:0);
+  }
+  // 雾/沙尘下用纯色背景更贴近“被吃掉的天空”
+  const heavy=(cur==='fog'||cur==='dust');
+  scene.skyAtmosphere.show=!heavy;
+  scene.skyBox.show=!heavy;
+  scene.backgroundColor=Cesium.Color.fromCssColorString(P.bg).darken(nf?0.55:0,new Cesium.Color());
+  // 白天/夜晚：移动太阳
+  viewer.clock.currentTime=Cesium.JulianDate.fromIso8601(nf?'2025-06-13T09:00:00Z':'2025-06-13T20:00:00Z');
+  scene.light.intensity=nf?0.4:2.0;
+}
+
+/* 粒子系统定位：其余预设跟随相机(身处其中)；龙卷锚定到世界地面点 tornadoBase(相机在外面看) */
+const up=new Cesium.Cartesian3(), pos=new Cesium.Cartesian3();
+scene.preUpdate.addEventListener(function(){
+  if(!active)return;
+  if(cur!=='tornado'){
+    Cesium.Cartesian3.normalize(camera.positionWC,up);
+    Cesium.Cartesian3.multiplyByScalar(up,PRESETS[cur].radius*0.45,pos);
+    Cesium.Cartesian3.add(camera.positionWC,pos,pos);
+    active.modelMatrix=Cesium.Matrix4.fromTranslation(pos,active.modelMatrix||new Cesium.Matrix4());
+  } else if(tornadoBase){
+    // 发射盘放在锚点地面，ENU 帧让局部 +Z=向上(CircleEmitter 在 xy 平面发射、速度沿 +Z)
+    active.modelMatrix=Cesium.Transforms.eastNorthUpToFixedFrame(tornadoBase,Cesium.Ellipsoid.WGS84,active.modelMatrix||new Cesium.Matrix4());
+    tornFunnelMM(); // 漏斗 Primitive 随锚点平移
+  }
+});
+
+/* —— 闪电（仅雷暴）：在头顶附近放一段发光折线 + 全屏天光骤亮 —— */
+let nextStrike=2;
+const boltEntity=viewer.entities.add({polyline:{positions:[],width:2.5,
+  material:new Cesium.ColorMaterialProperty(Cesium.Color.fromCssColorString('#eaf2ff')),show:false}});
+function strike(){
+  const base=Cesium.Cartesian3.fromDegrees(LON+(Math.random()-0.5)*0.04,LAT+0.02+Math.random()*0.04,1600);
+  const carto=Cesium.Cartographic.fromCartesian(base);
+  const pts=[];let h=1600,lon=Cesium.Math.toDegrees(carto.longitude),lat=Cesium.Math.toDegrees(carto.latitude);
+  while(h>0){pts.push(Cesium.Cartesian3.fromDegrees(lon,lat,h));lon+=(Math.random()-0.5)*0.004;lat+=(Math.random()-0.5)*0.003;h-=180+Math.random()*160;}
+  boltEntity.polyline.positions=pts;boltEntity.polyline.show=true;boltEntity._life=0.18;
+  const orig=scene.backgroundColor.clone();scene.backgroundColor=Cesium.Color.WHITE.withAlpha(1).brighten(0.2,new Cesium.Color());
+  setTimeout(()=>{scene.backgroundColor=orig;},60);
+}
+viewer.clock.onTick.addEventListener(()=>{
+  const dt=1/60;
+  // —— 锋面过境驱动：相位推进 → 锋面到相机的距离 → 降水带/风切变/雾 ——
+  if(cur==='front'){
+    frontPhase=(frontPhase+dt/FRONT_CYCLE)%1;
+    frontDCam=FRONT_R*(1-2*frontPhase);        // +R(锋前远)→ -R(锋后远)，过 0 即锋面到达相机
+    frontProf=bandProfile(frontDCam,frontType);
+    if(active) active.emissionRate=PRESETS.front.rate*(0.4+intensity*0.8)*Math.max(0.03,frontProf);
+    const blend=1/(1+Math.exp(frontDCam/300)); // d<0→1(锋后冷区)，d>0→0(锋前暖区)
+    frontWind.E=7*(1-blend)+9*blend;           // 锋前西南风 → 锋后西北风(veer)
+    frontWind.N=5*(1-blend)+(-8)*blend;
+    scene.fog.density=PRESETS.front.fog*(1+frontProf*1.8); // 锋面临近压暗
+  }
+  // —— 龙卷驱动：锚点正弦横扫(平移) + 漏斗自转 + 缓存朝向四元数(每 tick 一次，所有环/碎屑都读) ——
+  if(cur==='tornado' && tornadoBase){
+    tornadoT+=dt;
+    const off=TORN_AMP*Math.sin(tornadoT*TORN_W);                 // 平滑往返(无瞬时反向)
+    Cesium.Cartesian3.add(tornBase0,Cesium.Cartesian3.multiplyByScalar(tornTrack,off,_tA),tornadoBase);
+    Cesium.Cartesian3.normalize(tornadoBase,tornadoUp);
+    Cesium.Cartographic.fromCartesian(tornadoBase,Cesium.Ellipsoid.WGS84,tornadoCarto);
+    tornSpin+=TORN_OMEGA*dt;
+    _tornHPR.heading=tornSpin;
+    Cesium.Transforms.headingPitchRollQuaternion(
+      Cesium.Cartesian3.fromRadians(tornadoCarto.longitude,tornadoCarto.latitude,FUNNEL_TOP*0.5),
+      _tornHPR,Cesium.Ellipsoid.WGS84,undefined,tornQuat);
+  }
+  // 闪电：雷暴常发；冷锋仅在降水带峰值附近发，暖锋不发
+  const lt=PRESETS[cur].lightning && (cur!=='front' || (frontType==='cold' && frontProf>0.45));
+  if(lt){nextStrike-=dt;if(nextStrike<=0){nextStrike=1.5+Math.random()*4;strike();}}
+  if(boltEntity._life>0){boltEntity._life-=dt;if(boltEntity._life<=0)boltEntity.polyline.show=false;}
+});
+
+/* —— 锋面云墙：沿 frontMove 推进的半透明云/雨墙，让你"看见"锋面接近 —— */
+const _wallUp=new Cesium.Cartesian3(), _wallPerp=new Cesium.Cartesian3(), _wallTmp=new Cesium.Cartesian3();
+function frontWallPositions(){
+  const carto=Cesium.Cartographic.fromCartesian(camera.positionWC);
+  const camG=Cesium.Cartesian3.fromRadians(carto.longitude,carto.latitude,0);
+  const center=Cesium.Cartesian3.add(camG,Cesium.Cartesian3.multiplyByScalar(frontMove,-frontDCam,_wallTmp),new Cesium.Cartesian3()); // 锋前(d>0)在上风侧(相机正前方)
+  Cesium.Cartesian3.normalize(camG,_wallUp);
+  Cesium.Cartesian3.cross(_wallUp,frontMove,_wallPerp); Cesium.Cartesian3.normalize(_wallPerp,_wallPerp);
+  const HW=8000;
+  const e1=Cesium.Cartesian3.add(center,Cesium.Cartesian3.multiplyByScalar(_wallPerp,-HW,new Cesium.Cartesian3()),new Cesium.Cartesian3());
+  const e3=Cesium.Cartesian3.add(center,Cesium.Cartesian3.multiplyByScalar(_wallPerp, HW,new Cesium.Cartesian3()),new Cesium.Cartesian3());
+  return [e1,center,e3];
+}
+const frontWall=viewer.entities.add({ show:false, wall:{
+  positions:new Cesium.CallbackProperty(frontWallPositions,false),
+  maximumHeights:new Cesium.CallbackProperty(()=>{const h=frontType==='cold'?1800:900;return [h,h,h];},false),
+  minimumHeights:new Cesium.CallbackProperty(()=>[0,0,0],false),
+  material:new Cesium.ColorMaterialProperty(new Cesium.CallbackProperty(()=>{
+    const a=Math.max(0.10,frontProf);
+    return frontType==='cold'
+      ? Cesium.Color.fromCssColorString('#26303b').withAlpha(0.22+0.30*a)
+      : Cesium.Color.fromCssColorString('#9aa6b2').withAlpha(0.14+0.18*a);
+  },false))
+}});
+function updateFrontUI(){
+  frontWall.show=(cur==='front');
+  const ft=document.getElementById('fronttog'); if(ft) ft.style.display=(cur==='front')?'flex':'none';
+  if(cur==='front') frontPhase=0; // 进入锋面：从"锋前"开始过境
+}
+
+/* —— 龙卷漏斗(滚动噪声自定义材质 · 翻腾旋转的烟柱) ——
+   一个圆锥 Primitive + 自定义 Fabric 材质：噪声沿圆周(s)+竖直(t)滚动 → 表面翻腾旋转，
+   噪声驱动 alpha → 破碎边缘。顶上扣暗云墙(挡锥顶平盖 + 给"从风暴云垂下"语境)，
+   底下铺更宽的扬尘碗(接地特征)。漏斗/云墙/碎屑碗都随 tornadoBase 平移。 */
+const tornFunnelMat=new Cesium.Material({ fabric:{
+  uniforms:{ u_noise:TORN_NOISE },
+  source:'czm_material czm_getMaterial(czm_materialInput materialInput){'+
+    ' czm_material m=czm_getDefaultMaterial(materialInput); vec2 st=materialInput.st; float t=czm_frameNumber/60.0;'+
+    ' float n1=texture(u_noise, vec2(st.s*2.0+t*0.10, st.t*1.6-t*0.55)).r;'+
+    ' float n2=texture(u_noise, vec2(st.s*3.6-t*0.17, st.t*2.6-t*1.0)).r;'+
+    ' float n=n1*0.6+n2*0.4;'+
+    ' float vlow=smoothstep(0.0,0.14,st.t); float vhi=1.0-smoothstep(0.72,1.0,st.t);'+
+    ' float a=clamp(n*1.9-0.6,0.0,1.0)*vlow*vhi; a=clamp(a*1.5,0.0,0.88);'+
+    ' m.diffuse=mix(vec3(0.44,0.42,0.39),vec3(0.16,0.15,0.15),n); m.alpha=a; return m; }'
+}});
+const tornFunnel=new Cesium.Primitive({ show:false,
+  geometryInstances:new Cesium.GeometryInstance({geometry:new Cesium.CylinderGeometry({
+    length:FUNNEL_TOP,topRadius:300,bottomRadius:34,slices:56,
+    vertexFormat:Cesium.MaterialAppearance.MaterialSupport.TEXTURED.vertexFormat})}),
+  appearance:new Cesium.MaterialAppearance({material:tornFunnelMat, translucent:true, closed:false}),
+  asynchronous:false });
+scene.primitives.add(tornFunnel);
+function tornFunnelMM(){ // 把漏斗 Primitive 摆到 base+up*FUNNEL_TOP/2 的 ENU 帧(局部+Z=向上)
+  Cesium.Cartesian3.multiplyByScalar(tornadoUp,FUNNEL_TOP*0.5,_tmpA);
+  Cesium.Cartesian3.add(tornadoBase,_tmpA,_tmpB);
+  tornFunnel.modelMatrix=Cesium.Transforms.eastNorthUpToFixedFrame(_tmpB,Cesium.Ellipsoid.WGS84,tornFunnel.modelMatrix);
+}
+// 暗云墙：软云 billboard 扣在漏斗顶(挡平盖 + 给"从风暴云垂下"语境，软边不是硬盖)
+const tornWall=viewer.entities.add({ show:false,
+  position:new Cesium.CallbackProperty(function(){
+    return tornadoBase?Cesium.Cartesian3.add(tornadoBase,Cesium.Cartesian3.multiplyByScalar(tornadoUp,FUNNEL_TOP+90,_tmpA),new Cesium.Cartesian3()):tornBase0;
+  },false),
+  billboard:{ image:IMG_CLOUD, sizeInMeters:true, width:1900, height:760,
+    color:Cesium.Color.fromCssColorString('#2c2c31').withAlpha(0.92) }
+});
+// 扬尘云：软褐云 billboard 铺在漏斗根，比漏斗更宽(接地扬尘特征)
+const tornWhirl=viewer.entities.add({ show:false,
+  position:new Cesium.CallbackProperty(function(){
+    return tornadoBase?Cesium.Cartesian3.add(tornadoBase,Cesium.Cartesian3.multiplyByScalar(tornadoUp,70,_tmpB),new Cesium.Cartesian3()):tornBase0;
+  },false),
+  billboard:{ image:IMG_CLOUD, sizeInMeters:true, width:900, height:380,
+    color:Cesium.Color.fromCssColorString('#4c4133').withAlpha(0.88) }
+});
+function updateTornadoUI(){
+  const on=(cur==='tornado');
+  tornFunnel.show=on; tornWall.show=on; tornWhirl.show=on;
+  if(on){
+    tornadoT=0;
+    tornadoBase=Cesium.Cartesian3.clone(tornBase0,tornadoBase||new Cesium.Cartesian3());
+    Cesium.Cartesian3.normalize(tornadoBase,tornadoUp);
+    Cesium.Cartographic.fromCartesian(tornadoBase,Cesium.Ellipsoid.WGS84,tornadoCarto);
+    _tornHPR.heading=tornSpin;
+    Cesium.Transforms.headingPitchRollQuaternion(
+      Cesium.Cartesian3.fromRadians(tornadoCarto.longitude,tornadoCarto.latitude,FUNNEL_TOP*0.5),
+      _tornHPR,Cesium.Ellipsoid.WGS84,undefined,tornQuat);
+    tornFunnelMM(); // 首帧就把漏斗摆正
+  } else { tornadoBase=null; }
+}
+// 时钟必须前进：Cesium ParticleSystem 用仿真时间增量 dt 来发射/老化粒子，
+// multiplier=0 会冻结整个体感层（粒子不动、不发射）。用 1x 让粒子动起来；
+// 昼夜由 applyMood 在切换时把 currentTime 重新钉到固定时刻（几分钟漂移可忽略）。
+viewer.clock.shouldAnimate=true;
+viewer.clock.multiplier=1;
+
+/* —— UI —— */
+document.querySelectorAll('#pills .pill').forEach(p=>p.addEventListener('click',()=>{
+  document.querySelectorAll('#pills .pill').forEach(x=>x.classList.remove('on'));p.classList.add('on');cur=p.dataset.p;
+  exitLive(); // 手动选现象 = 退出实况模式（用预设风、停轮询）
+  buildSystem();}));
+document.querySelectorAll('#dn button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#dn button').forEach(x=>x.classList.remove('on'));b.classList.add('on');daynight=b.dataset.d;applyMood(PRESETS[cur]);}));
+// 冷锋/暖锋切换（仅锋面现象下可见）：墙高/材质/降水带随 frontType 实时变
+document.querySelectorAll('#fronttog button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('#fronttog button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+  frontType=b.dataset.ft; frontPhase=0; updateHead();}));
+const intel=document.getElementById('intensity');
+intel.addEventListener('input',()=>{intensity=intel.value/100;document.getElementById('intV').textContent=intel.value+'%';
+  intel.style.setProperty('--p',intel.value+'%');if(active)active.emissionRate=PRESETS[cur].rate*(0.4+intensity*0.8);});
+intel.style.setProperty('--p','70%');
+
+/* ——【i18n 中英双语 · 默认英文】+ 真实数据接缝(任务①)——
+   Open-Meteo 全球、CORS 开放、免密钥，可客户端直接跑(NWS 不覆盖加拿大)。 */
+const I18N={
+  en:{
+    docTitle:"Weather, live · Cesium Earth", loading:"streaming terrain…",
+    note:["Real Earth + real terrain","density/wind ← HRRR·MRMS hooks (reserved)","one engine, the whole JetStream list"],
+    intensity:"Intensity", day:"Day", night:"Night",
+    liveIdle:"Offline · Open-Meteo", liveBtn:"⟳ LIVE", liveOn:"⏸ LIVE ON", liveLoading:"loading…", liveFail:"failed · see console",
+    wind:"wind ", recenter:"Re-center to best vantage", front:{cold:"Cold",warm:"Warm"},
+    pills:{storm:"Storm",snow:"Snow",fog:"Fog",dust:"Haboob",tornado:"Tornado",front:"Front"},
+    titles:{storm:"Thunderstorm · North Shore",snow:"Heavy Snow · North Shore",fog:"Dense Fog · visibility drop",dust:"Haboob · wall of dust",tornado:"Tornado · vortex field",front_cold:"Cold Front · passing",front_warm:"Warm Front · passing"},
+    wmo:{0:"Clear",1:"Mostly clear",2:"Partly cloudy",3:"Overcast",45:"Fog",48:"Rime fog",51:"Drizzle",53:"Drizzle",55:"Drizzle",56:"Freezing drizzle",57:"Freezing drizzle",61:"Light rain",63:"Rain",65:"Heavy rain",66:"Freezing rain",67:"Freezing rain",71:"Light snow",73:"Snow",75:"Heavy snow",77:"Snow grains",80:"Showers",81:"Showers",82:"Violent showers",85:"Snow showers",86:"Heavy snow showers",95:"Thunderstorm",96:"T-storm, hail",99:"T-storm, hail"}
+  },
+  zh:{
+    docTitle:"天气现场 · Cesium 真实地球", loading:"加载真实地形中…",
+    note:["真实地球 + 真实地形","粒子密度/风场 ← 预留 HRRR·MRMS 接口","同一引擎覆盖 JetStream 清单"],
+    intensity:"强度 Intensity", day:"白天", night:"夜晚",
+    liveIdle:"未连线 · Open-Meteo", liveBtn:"⟳ 实况 LIVE", liveOn:"⏸ 实况 ON", liveLoading:"查询中…", liveFail:"获取失败 · 看 console",
+    wind:"风", recenter:"复位到最佳观测角度", front:{cold:"冷锋",warm:"暖锋"},
+    pills:{storm:"雷暴",snow:"大雪",fog:"浓雾",dust:"沙尘暴",tornado:"龙卷",front:"锋面"},
+    titles:{storm:"雷暴 · 温哥华北岸",snow:"大雪 · 温哥华北岸",fog:"浓雾 · 能见度骤降",dust:"沙尘暴 · 沙墙压境",tornado:"龙卷 · 涡旋风场",front_cold:"冷锋过境",front_warm:"暖锋过境"},
+    wmo:{0:"晴",1:"晴间多云",2:"多云",3:"阴",45:"雾",48:"雾凇",51:"毛毛雨",53:"毛毛雨",55:"毛毛雨",56:"冻毛雨",57:"冻毛雨",61:"小雨",63:"中雨",65:"大雨",66:"冻雨",67:"冻雨",71:"小雪",73:"中雪",75:"大雪",77:"米雪",80:"阵雨",81:"阵雨",82:"强阵雨",85:"阵雪",86:"强阵雪",95:"雷暴",96:"雷暴冰雹",99:"雷暴冰雹"}
+  }
+};
+let lang='en';
+function otherLang(){return lang==='en'?'zh':'en';}
+let lastLive=null; // 最近一次实况结果，切语言时重渲染状态行
+
+function applyLang(l){
+  lang=l; const t=I18N[l], o=I18N[otherLang()];
+  document.documentElement.lang = l==='zh'?'zh':'en';
+  document.title=t.docTitle;
+  const ld=document.getElementById('loading'); if(ld) ld.textContent=t.loading;
+  document.getElementById('note').innerHTML=`<b>${t.note[0]}</b><br>${t.note[1]}<br>${t.note[2]}`;
+  document.querySelector('.ctlbox .lab span').textContent=t.intensity;
+  document.querySelectorAll('#dn button').forEach(b=>{ b.textContent = b.dataset.d==='day'?t.day:t.night; });
+  document.querySelectorAll('#pills .pill').forEach(p=>{ const k=p.dataset.p;
+    p.querySelector('.nm').textContent=t.pills[k]; p.querySelector('.en').textContent=o.pills[k]; });
+  document.querySelectorAll('#fronttog button').forEach(b=>{ b.textContent = b.dataset.ft==='cold'?t.front.cold:t.front.warm; });
+  document.getElementById('recenter').title=t.recenter;
+  updateHead();
+  const btn=document.getElementById('liveBtn'); if(!btn.disabled) btn.textContent = liveTimer? t.liveOn : t.liveBtn;
+  document.getElementById('liveStat').textContent=liveStatText();
+  document.querySelectorAll('#langtog button').forEach(b=>b.classList.toggle('on',b.dataset.l===l));
+}
+
+// 由最近实况 + 当前语言渲染状态行（无实况则显示离线文案）
+function liveStatText(){
+  const t=I18N[lang];
+  if(!lastLive) return t.liveIdle;
+  const r=lastLive, nm=t.wmo[r.debug.code]??('code '+r.debug.code);
+  const tmp=(r.debug.temp!=null)?Math.round(r.debug.temp)+'°':'--';
+  const wnd=(r.wind&&r.wind.speed!=null)?' · '+t.wind+Math.round(r.wind.speed):'';
+  return `${nm} · ${r._pct}% · ${tmp}${wnd} · ${r._time}`;
+}
+
+function setDayNightUI(d){daynight=d;
+  document.querySelectorAll('#dn button').forEach(x=>x.classList.toggle('on',x.dataset.d===d));}
+
+let liveTimer=null;
+const POLL_MS=5*60*1000; // 实况轮询间隔（5 分钟）
+function pad2(n){return (n<10?'0':'')+n;}
+function nowHHMM(){const d=new Date();return pad2(d.getHours())+':'+pad2(d.getMinutes());}
+
+// 退出实况：停轮询、清实况风、复位按钮
+function exitLive(){
+  if(liveTimer){clearInterval(liveTimer);liveTimer=null;}
+  liveWind=null; lastLive=null;
+  const btn=document.getElementById('liveBtn'), stat=document.getElementById('liveStat');
+  if(btn){btn.classList.remove('live');btn.textContent=I18N[lang].liveBtn;}
+  if(stat) stat.textContent=I18N[lang].liveIdle;
+}
+
+// 拉一次实况并应用到场景（preset + 强度 + 昼夜 + 实况风）。返回是否成功。
+async function applyRealConditions(){
+  const stat=document.getElementById('liveStat');
+  try{
+    const r=await WeatherData.pickForLocation(LAT,LON);
+    console.log("live:",r.source,r.debug);
+    cur=r.preset; intensity=r.intensity;
+    document.querySelectorAll('#pills .pill').forEach(x=>x.classList.toggle('on',x.dataset.p===cur));
+    const el=document.getElementById('intensity'); el.value=Math.round(intensity*100);
+    el.style.setProperty('--p',el.value+'%'); document.getElementById('intV').textContent=el.value+'%';
+    if(r.daynight) setDayNightUI(r.daynight);
+    liveWind=(r.wind&&r.wind.E!=null)?{E:r.wind.E,N:r.wind.N}:null; // 实况风驱动粒子
+    buildSystem(); // 读全局 cur/intensity/daynight/liveWind 重建场景
+    r._pct=el.value; r._time=nowHHMM(); lastLive=r; // 存下供切语言时重渲染
+    stat.textContent=liveStatText();
+    return true;
+  }catch(e){
+    console.warn("live fetch failed:",e);
+    lastLive=null; stat.textContent=I18N[lang].liveFail;
+    return false;
+  }
+}
+
+// 实况按钮 = 开/关切换；开启即拉一次 + 每 POLL_MS 轮询
+async function toggleLive(){
+  const btn=document.getElementById('liveBtn');
+  if(liveTimer){ exitLive(); return; }
+  btn.disabled=true; btn.textContent=I18N[lang].liveLoading;
+  const ok=await applyRealConditions();
+  btn.disabled=false;
+  if(ok){ btn.classList.add('live'); btn.textContent=I18N[lang].liveOn; liveTimer=setInterval(applyRealConditions,POLL_MS); }
+  else { btn.classList.remove('live'); btn.textContent=I18N[lang].liveBtn; }
+}
+document.getElementById('liveBtn').addEventListener('click',toggleLive);
+// 语言切换（中/EN）
+document.querySelectorAll('#langtog button').forEach(b=>b.addEventListener('click',()=>applyLang(b.dataset.l)));
+// 想开页即进入实况，取消下一行注释：
+// toggleLive();
+
+buildSystem();
+applyLang('en'); // 默认英文：统一所有 UI 文案与动态文本
+</script>
+</body>
+</html>

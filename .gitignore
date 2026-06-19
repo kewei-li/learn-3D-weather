@@ -1,0 +1,6 @@
+config.js
+node_modules/
+.DS_Store
+.gstack/
+weather-live.zip
+.claude/settings.local.json
