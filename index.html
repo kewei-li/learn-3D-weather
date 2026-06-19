@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="en">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -9,96 +9,130 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Spline+Sans+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  :root{--ink:#f1f4f7;--ink-dim:rgba(240,244,248,.6);--glass:rgba(20,24,30,.46);--glass-line:rgba(255,255,255,.14);
-    --sans:'Archivo','PingFang SC','Microsoft YaHei',sans-serif;--mono:'Spline Sans Mono',ui-monospace,monospace;}
+  :root{
+    --ink:#f1f4f7; --ink-dim:rgba(236,241,247,.82);
+    --glass:rgba(16,20,26,.62); --glass-line:rgba(255,255,255,.16);
+    --surface-hover:rgba(255,255,255,.10); --surface-active:rgba(255,255,255,.20);
+    --accent-live:120,202,143; --focus:#a7c8ff;
+    --r-lg:14px; --r-md:10px; --r-sm:8px;
+    --sans:'Archivo','PingFang SC','Microsoft YaHei',sans-serif;--mono:'Spline Sans Mono',ui-monospace,monospace;
+    --ease:cubic-bezier(.2,.7,.25,1);
+  }
   *{margin:0;padding:0;box-sizing:border-box;}
-  html,body,#cesiumContainer{width:100%;height:100%;overflow:hidden;background:#000;font-family:var(--sans);}
+  html,body,#cesiumContainer{width:100%;height:100%;overflow:hidden;background:#06080b;font-family:var(--sans);}
   .cesium-widget-credits{font-size:9px!important;opacity:.5;}
+  /* 键盘焦点环：可见但不打扰鼠标用户 */
+  :focus-visible{outline:2px solid var(--focus);outline-offset:2px;}
+  :focus:not(:focus-visible){outline:none;}
   #head{position:fixed;top:16px;left:18px;z-index:10;pointer-events:none;color:var(--ink);text-shadow:0 2px 16px rgba(0,0,0,.7);}
   #head h1{font-size:15px;font-weight:700;}
   #head .s{font-family:var(--mono);font-size:10px;color:var(--ink-dim);letter-spacing:.07em;margin-top:3px;text-transform:uppercase;}
-  #note{position:fixed;right:14px;top:48px;z-index:10;max-width:210px;text-align:right;color:rgba(255,255,255,.55);
-    font-family:var(--mono);font-size:9px;line-height:1.6;text-shadow:0 1px 8px rgba(0,0,0,.8);pointer-events:none;}
-  #langtog{position:fixed;right:14px;top:12px;z-index:11;display:flex;gap:2px;padding:3px;border-radius:9px;
+  #note{position:fixed;right:14px;top:50px;z-index:10;max-width:206px;text-align:right;color:var(--ink-dim);
+    font-family:var(--mono);font-size:10px;line-height:1.55;text-shadow:0 1px 8px rgba(0,0,0,.85);pointer-events:none;}
+  #note b{color:var(--ink);}
+  #langtog{position:fixed;right:14px;top:12px;z-index:11;display:flex;gap:2px;padding:3px;border-radius:var(--r-sm);
     background:var(--glass);border:1px solid var(--glass-line);
-    backdrop-filter:blur(20px) saturate(1.2);-webkit-backdrop-filter:blur(20px) saturate(1.2);box-shadow:0 10px 26px -16px rgba(0,0,0,.8);}
-  #langtog button{font-family:var(--mono);font-size:10px;color:var(--ink-dim);background:none;border:none;padding:4px 8px;border-radius:6px;cursor:pointer;transition:.16s;}
+    backdrop-filter:blur(14px) saturate(1.2);-webkit-backdrop-filter:blur(14px) saturate(1.2);box-shadow:0 10px 26px -16px rgba(0,0,0,.8);}
+  #langtog button{font-family:var(--sans);font-weight:600;font-size:12px;color:var(--ink-dim);background:none;border:none;padding:6px 10px;border-radius:var(--r-sm);cursor:pointer;transition:.16s var(--ease);}
   #langtog button:hover{color:var(--ink);}
-  #langtog button.on{background:rgba(255,255,255,.18);color:var(--ink);}
-  #note b{color:rgba(255,255,255,.8);}
+  #langtog button.on{background:var(--surface-active);color:var(--ink);}
   #dock{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:10;display:flex;align-items:center;gap:13px;
-    padding:9px 11px;background:var(--glass);border:1px solid var(--glass-line);border-radius:15px;color:var(--ink);
-    backdrop-filter:blur(20px) saturate(1.2);-webkit-backdrop-filter:blur(20px) saturate(1.2);box-shadow:0 18px 50px -22px rgba(0,0,0,.85);}
+    max-width:calc(100vw - 20px);
+    padding:9px 11px;background:var(--glass);border:1px solid var(--glass-line);border-radius:var(--r-lg);color:var(--ink);
+    backdrop-filter:blur(14px) saturate(1.2);-webkit-backdrop-filter:blur(14px) saturate(1.2);box-shadow:0 18px 50px -22px rgba(0,0,0,.85);}
   .pills{display:flex;gap:5px;}
-  .pill{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:7px 11px 6px;border-radius:10px;border:1px solid transparent;transition:.16s;min-width:58px;}
-  .pill:hover{background:rgba(255,255,255,.06);}
+  .pill{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:8px 11px;border-radius:var(--r-md);
+    border:1px solid transparent;background:none;color:inherit;font:inherit;transition:.16s var(--ease);min-width:60px;min-height:52px;}
+  .pill:hover{background:var(--surface-hover);}
   .pill.on{background:rgba(255,255,255,.13);border-color:rgba(255,255,255,.22);}
   .pill .ic{width:22px;height:22px;}
   .pill .nm{font-size:11px;font-weight:600;}
-  .pill .en{font-family:var(--mono);font-size:7.5px;color:var(--ink-dim);letter-spacing:.05em;text-transform:uppercase;}
-  .sep{width:1px;height:36px;background:var(--glass-line);}
-  .ctlbox{display:flex;flex-direction:column;gap:6px;min-width:120px;}
-  .ctlbox .lab{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;color:var(--ink-dim);letter-spacing:.04em;}
-  input[type=range]{-webkit-appearance:none;width:100%;height:3px;border-radius:2px;background:linear-gradient(90deg,#fff 0%,#fff var(--p,70%),rgba(255,255,255,.22) var(--p,70%));outline:none;cursor:pointer;}
-  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.25);cursor:pointer;}
-  .daynight{display:flex;background:rgba(255,255,255,.08);border-radius:8px;padding:3px;gap:2px;}
-  .daynight button{font-family:var(--mono);font-size:9.5px;color:var(--ink-dim);background:none;border:none;padding:5px 9px;border-radius:6px;cursor:pointer;}
-  .daynight button.on{background:rgba(255,255,255,.18);color:var(--ink);}
-  .livebox{display:flex;flex-direction:column;gap:6px;min-width:96px;}
-  #liveBtn{font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--ink);cursor:pointer;
-    background:rgba(255,255,255,.10);border:1px solid var(--glass-line);border-radius:9px;padding:8px 10px;transition:.16s;}
+  .pill .en{font-family:var(--mono);font-size:9px;color:var(--ink-dim);letter-spacing:.04em;text-transform:uppercase;}
+  .sep{width:1px;height:36px;background:var(--glass-line);flex:0 0 auto;}
+  .ctlbox{display:flex;flex-direction:column;gap:7px;min-width:124px;}
+  .ctlbox .lab{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--ink-dim);letter-spacing:.03em;}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--ink) 0%,var(--ink) var(--p,70%),rgba(255,255,255,.24) var(--p,70%));cursor:pointer;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--ink);box-shadow:0 0 0 3px rgba(255,255,255,.25);cursor:pointer;}
+  input[type=range]::-moz-range-thumb{width:16px;height:16px;border:none;border-radius:50%;background:var(--ink);box-shadow:0 0 0 3px rgba(255,255,255,.25);cursor:pointer;}
+  .daynight{display:flex;background:rgba(255,255,255,.08);border-radius:var(--r-sm);padding:3px;gap:2px;}
+  .daynight button{font-family:var(--sans);font-weight:600;font-size:11px;white-space:nowrap;color:var(--ink-dim);background:none;border:none;padding:7px 11px;border-radius:6px;cursor:pointer;transition:.16s var(--ease);}
+  .daynight button:hover{color:var(--ink);}
+  .daynight button.on{background:var(--surface-active);color:var(--ink);}
+  .livebox{display:flex;flex-direction:column;gap:6px;min-width:104px;}
+  #liveBtn{font-family:var(--sans);font-weight:600;font-size:11px;letter-spacing:.01em;color:var(--ink);cursor:pointer;
+    background:rgba(255,255,255,.10);border:1px solid var(--glass-line);border-radius:var(--r-sm);padding:9px 12px;transition:.16s var(--ease);min-height:38px;}
   #liveBtn:hover{background:rgba(255,255,255,.17);}
   #liveBtn:disabled{opacity:.55;cursor:default;}
-  #liveBtn.live{background:rgba(118,200,142,.22);border-color:rgba(118,200,142,.5);}
-  #liveStat{font-family:var(--mono);font-size:8.5px;color:var(--ink-dim);text-align:center;line-height:1.5;}
-  #recenter{position:fixed;right:16px;bottom:16px;z-index:10;width:42px;height:42px;border-radius:50%;
+  #liveBtn.live{background:rgba(var(--accent-live),.22);border-color:rgba(var(--accent-live),.5);}
+  #liveStat{font-family:var(--mono);font-size:10px;color:var(--ink-dim);text-align:center;line-height:1.5;}
+  #recenter{position:fixed;right:16px;bottom:16px;z-index:10;width:44px;height:44px;border-radius:50%;
     display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink);
     background:var(--glass);border:1px solid var(--glass-line);
-    backdrop-filter:blur(20px) saturate(1.2);-webkit-backdrop-filter:blur(20px) saturate(1.2);
-    box-shadow:0 12px 30px -14px rgba(0,0,0,.8);transition:.16s;}
+    backdrop-filter:blur(14px) saturate(1.2);-webkit-backdrop-filter:blur(14px) saturate(1.2);
+    box-shadow:0 12px 30px -14px rgba(0,0,0,.8);transition:.16s var(--ease);}
   #recenter:hover{background:rgba(255,255,255,.15);}
   #recenter:active{transform:scale(.93);}
   #recenter svg{width:20px;height:20px;}
-  #fronttog{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);z-index:10;display:none;gap:2px;padding:3px;border-radius:9px;
+  #fronttog{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:10;display:none;gap:2px;padding:3px;border-radius:var(--r-sm);
     background:var(--glass);border:1px solid var(--glass-line);
-    backdrop-filter:blur(20px) saturate(1.2);-webkit-backdrop-filter:blur(20px) saturate(1.2);box-shadow:0 10px 26px -16px rgba(0,0,0,.8);}
-  #fronttog button{font-family:var(--mono);font-size:10px;color:var(--ink-dim);background:none;border:none;padding:5px 13px;border-radius:6px;cursor:pointer;transition:.16s;}
+    backdrop-filter:blur(14px) saturate(1.2);-webkit-backdrop-filter:blur(14px) saturate(1.2);box-shadow:0 10px 26px -16px rgba(0,0,0,.8);}
+  #fronttog button{font-family:var(--sans);font-weight:600;font-size:11px;color:var(--ink-dim);background:none;border:none;padding:7px 14px;border-radius:6px;cursor:pointer;transition:.16s var(--ease);}
   #fronttog button:hover{color:var(--ink);}
-  #fronttog button.on{background:rgba(255,255,255,.18);color:var(--ink);}
-  #loading{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;background:#070a0f;color:var(--ink-dim);font-family:var(--mono);font-size:12px;letter-spacing:.08em;transition:opacity .6s;}
+  #fronttog button.on{background:var(--surface-active);color:var(--ink);}
+  #loading{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;background:#070a0f;color:var(--ink-dim);font-family:var(--mono);font-size:13px;letter-spacing:.08em;transition:opacity .6s;}
+  /* 移动端：dock 换行不溢出；触摸目标加大 */
+  @media (max-width:680px){
+    #dock{flex-wrap:wrap;justify-content:center;gap:8px 6px;bottom:12px;}
+    .sep{display:none;}
+    .pills{flex-wrap:wrap;justify-content:center;width:100%;}
+    .ctlbox{flex:1 1 46%;min-width:46%;}
+    .livebox{flex:1 1 46%;min-width:46%;}
+    #note{display:none;}
+    #fronttog{bottom:auto;top:54px;}
+  }
+  @media (pointer:coarse){
+    #langtog button,.daynight button,#fronttog button,#liveBtn{min-height:44px;}
+    .pill{min-height:58px;}
+    input[type=range]{height:8px;}
+    input[type=range]::-webkit-slider-thumb{width:22px;height:22px;}
+    input[type=range]::-moz-range-thumb{width:22px;height:22px;}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition-duration:.01ms!important;animation-duration:.01ms!important;}
+  }
 </style>
 </head>
 <body>
 <div id="cesiumContainer"></div>
 <div id="loading">streaming terrain…</div>
-<div id="langtog"><button data-l="en" class="on">EN</button><button data-l="zh">中</button></div>
+<div id="langtog" role="group" aria-label="Language"><button type="button" data-l="en" class="on" aria-pressed="true">EN</button><button type="button" data-l="zh" aria-pressed="false">中</button></div>
 <div id="head"><h1 id="h-title">Thunderstorm · North Shore</h1><div class="s" id="h-sub">THUNDERSTORM · Cesium World Terrain</div></div>
-<div id="note"><b>Real Earth + real terrain</b><br>density/wind ← HRRR·MRMS hooks (reserved)<br>one engine, the whole JetStream list</div>
-<div id="dock">
-  <div class="pills" id="pills">
-    <div class="pill on" data-p="storm"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a4 4 0 0 1 1-7.8A5.5 5.5 0 0 1 17 6a3.5 3.5 0 0 1 .5 7"/><path d="M12 12l-2 4h3l-2 4"/></svg><span class="nm">Storm</span><span class="en">雷暴</span></div>
-    <div class="pill" data-p="snow"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M5 7l14 10M19 7L5 17"/></svg><span class="nm">Snow</span><span class="en">大雪</span></div>
-    <div class="pill" data-p="fog"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M3 9h18M4 13h16M3 17h18M5 21h14"/></svg><span class="nm">Fog</span><span class="en">浓雾</span></div>
-    <div class="pill" data-p="dust"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M3 8c3-2 6 2 9 0s6-2 9 0M3 13c3-2 6 2 9 0s6-2 9 0M3 18c3-2 6 2 9 0s6-2 9 0"/></svg><span class="nm">Haboob</span><span class="en">沙尘暴</span></div>
-    <div class="pill" data-p="tornado"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16M6 9h12M9 13h7M11 17h4M13 21l-1-4"/></svg><span class="nm">Tornado</span><span class="en">龙卷</span></div>
-    <div class="pill" data-p="front"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 14h20"/><path d="M5.5 14l2.5-4 2.5 4z" fill="currentColor" stroke="none"/><path d="M12.5 14l2.5-4 2.5 4z" fill="currentColor" stroke="none"/></svg><span class="nm">Front</span><span class="en">锋面</span></div>
+<div id="note"><b>Real Earth · real terrain</b><br>Pick a phenomenon below<br>or tap LIVE for right now</div>
+<div id="dock" role="toolbar" aria-label="Weather controls">
+  <div class="pills" id="pills" role="group" aria-label="Phenomenon">
+    <button type="button" class="pill on" data-p="storm" aria-pressed="true"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13a4 4 0 0 1 1-7.8A5.5 5.5 0 0 1 17 6a3.5 3.5 0 0 1 .5 7"/><path d="M12 12l-2 4h3l-2 4"/></svg><span class="nm">Storm</span><span class="en">雷暴</span></button>
+    <button type="button" class="pill" data-p="snow" aria-pressed="false"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M5 7l14 10M19 7L5 17"/></svg><span class="nm">Snow</span><span class="en">大雪</span></button>
+    <button type="button" class="pill" data-p="fog" aria-pressed="false"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M3 9h18M4 13h16M3 17h18M5 21h14"/></svg><span class="nm">Fog</span><span class="en">浓雾</span></button>
+    <button type="button" class="pill" data-p="dust" aria-pressed="false"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M3 8c3-2 6 2 9 0s6-2 9 0M3 13c3-2 6 2 9 0s6-2 9 0M3 18c3-2 6 2 9 0s6-2 9 0"/></svg><span class="nm">Haboob</span><span class="en">沙尘暴</span></button>
+    <button type="button" class="pill" data-p="tornado" aria-pressed="false"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5h16M6 9h12M9 13h7M11 17h4M13 21l-1-4"/></svg><span class="nm">Tornado</span><span class="en">龙卷</span></button>
+    <button type="button" class="pill" data-p="front" aria-pressed="false"><svg class="ic" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M2 14h20"/><path d="M5.5 14l2.5-4 2.5 4z" fill="currentColor" stroke="none"/><path d="M12.5 14l2.5-4 2.5 4z" fill="currentColor" stroke="none"/></svg><span class="nm">Front</span><span class="en">锋面</span></button>
   </div>
-  <div class="sep"></div>
+  <div class="sep" aria-hidden="true"></div>
   <div class="ctlbox">
-    <div class="lab"><span>Intensity</span><span id="intV">70%</span></div>
-    <input type="range" id="intensity" min="20" max="100" value="70">
-    <div class="daynight" id="dn"><button data-d="day" class="on">Day</button><button data-d="night">Night</button></div>
+    <div class="lab"><span id="intLab">Intensity</span><span id="intV">70%</span></div>
+    <input type="range" id="intensity" min="20" max="100" value="70" aria-labelledby="intLab">
+    <div class="daynight" id="dn" role="group" aria-label="Time of day"><button type="button" data-d="day" class="on" aria-pressed="true">Day</button><button type="button" data-d="night" aria-pressed="false">Night</button></div>
   </div>
-  <div class="sep"></div>
+  <div class="sep" aria-hidden="true"></div>
   <div class="livebox">
-    <button id="liveBtn">⟳ LIVE</button>
-    <div id="liveStat">Offline · Open-Meteo</div>
+    <button type="button" id="liveBtn">⟳ LIVE</button>
+    <div id="liveStat" aria-live="polite">Offline · Open-Meteo</div>
   </div>
 </div>
-<button id="recenter" title="Re-center to best vantage">
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="6"/><path d="M12 1.5v3.5M12 19v3.5M1.5 12h3.5M19 12h3.5"/></svg>
+<button id="recenter" type="button" aria-label="Re-center to best vantage" title="Re-center to best vantage">
+  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="6"/><path d="M12 1.5v3.5M12 19v3.5M1.5 12h3.5M19 12h3.5"/></svg>
 </button>
-<div id="fronttog"><button data-ft="cold" class="on">Cold</button><button data-ft="warm">Warm</button></div>
+<div id="fronttog" role="group" aria-label="Front type"><button type="button" data-ft="cold" class="on" aria-pressed="true">Cold</button><button type="button" data-ft="warm" aria-pressed="false">Warm</button></div>
 
 <script src="config.js"></script>
 <script src="src/datasources.js"></script>
@@ -152,8 +186,12 @@ const HOME_VIEW={
   orientation:{heading:Cesium.Math.toRadians(348),pitch:Cesium.Math.toRadians(2),roll:0}
 };
 camera.setView(HOME_VIEW);
-/* 复位：平滑飞回最佳观测角度（粒子跟随相机，飞行中天气一直在身边） */
-function recenter(){ camera.flyTo({destination:HOME_VIEW.destination,orientation:HOME_VIEW.orientation,duration:1.4}); }
+/* 复位：平滑飞回最佳观测角度（粒子跟随相机）。尊重 prefers-reduced-motion：减弱动效时直接跳转。 */
+const _reduceMotion=()=>window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function recenter(){
+  if(_reduceMotion()) camera.setView({destination:HOME_VIEW.destination,orientation:HOME_VIEW.orientation});
+  else camera.flyTo({destination:HOME_VIEW.destination,orientation:HOME_VIEW.orientation,duration:1.4});
+}
 document.getElementById('recenter').addEventListener('click',recenter);
 
 /* —— 粒子贴图（canvas → dataURI，无外部依赖）—— */
@@ -344,14 +382,15 @@ function buildSystem(){
   updateHead();
   updateFrontUI();
   updateTornadoUI();
+  syncPills();
 }
+// 现象 pill 的选中态：class + aria-pressed 同步(键盘/读屏可知当前选中)
+function syncPills(){ document.querySelectorAll('#pills .pill').forEach(x=>{
+  const on=x.dataset.p===cur; x.classList.toggle('on',on); x.setAttribute('aria-pressed',on?'true':'false'); }); }
 function updateHead(){
-  let title, sub;
-  if(cur==='front'){ title=I18N[lang].titles['front_'+frontType];
-    sub=(frontType==='cold'?'COLD FRONT':'WARM FRONT')+' · Cesium World Terrain'; }
-  else { title=I18N[lang].titles[cur]; sub=PRESETS[cur].sub; }
+  const title = cur==='front' ? I18N[lang].titles['front_'+frontType] : I18N[lang].titles[cur];
   document.getElementById('h-title').textContent=title;
-  document.getElementById('h-sub').textContent=sub;
+  document.getElementById('h-sub').textContent=I18N[lang].sub; // 副标描述数据层，不再重复现象名
 }
 
 function applyMood(P){
@@ -530,14 +569,13 @@ viewer.clock.multiplier=1;
 
 /* —— UI —— */
 document.querySelectorAll('#pills .pill').forEach(p=>p.addEventListener('click',()=>{
-  document.querySelectorAll('#pills .pill').forEach(x=>x.classList.remove('on'));p.classList.add('on');cur=p.dataset.p;
-  exitLive(); // 手动选现象 = 退出实况模式（用预设风、停轮询）
-  buildSystem();}));
-document.querySelectorAll('#dn button').forEach(b=>b.addEventListener('click',()=>{
-  document.querySelectorAll('#dn button').forEach(x=>x.classList.remove('on'));b.classList.add('on');daynight=b.dataset.d;applyMood(PRESETS[cur]);}));
+  cur=p.dataset.p;
+  exitLive();      // 手动选现象 = 退出实况模式（用预设风、停轮询）
+  buildSystem();}));// buildSystem→syncPills 负责选中态(class + aria-pressed)
+document.querySelectorAll('#dn button').forEach(b=>b.addEventListener('click',()=>{ setDayNightUI(b.dataset.d); applyMood(PRESETS[cur]); }));
 // 冷锋/暖锋切换（仅锋面现象下可见）：墙高/材质/降水带随 frontType 实时变
 document.querySelectorAll('#fronttog button').forEach(b=>b.addEventListener('click',()=>{
-  document.querySelectorAll('#fronttog button').forEach(x=>x.classList.remove('on'));b.classList.add('on');
+  document.querySelectorAll('#fronttog button').forEach(x=>{const on=x===b;x.classList.toggle('on',on);x.setAttribute('aria-pressed',on?'true':'false');});
   frontType=b.dataset.ft; frontPhase=0; updateHead();}));
 const intel=document.getElementById('intensity');
 intel.addEventListener('input',()=>{intensity=intel.value/100;document.getElementById('intV').textContent=intel.value+'%';
@@ -549,9 +587,9 @@ intel.style.setProperty('--p','70%');
 const I18N={
   en:{
     docTitle:"Weather, live · Cesium Earth", loading:"streaming terrain…",
-    note:["Real Earth + real terrain","density/wind ← HRRR·MRMS hooks (reserved)","one engine, the whole JetStream list"],
+    note:["Real Earth · real terrain","Pick a phenomenon below","or tap LIVE for right now"], sub:"Real terrain · OSM 3D buildings",
     intensity:"Intensity", day:"Day", night:"Night",
-    liveIdle:"Offline · Open-Meteo", liveBtn:"⟳ LIVE", liveOn:"⏸ LIVE ON", liveLoading:"loading…", liveFail:"failed · see console",
+    liveIdle:"Live off · Open-Meteo", liveBtn:"⟳ LIVE", liveOn:"⏸ LIVE ON", liveLoading:"loading…", liveFail:"failed · see console",
     wind:"wind ", recenter:"Re-center to best vantage", front:{cold:"Cold",warm:"Warm"},
     pills:{storm:"Storm",snow:"Snow",fog:"Fog",dust:"Haboob",tornado:"Tornado",front:"Front"},
     titles:{storm:"Thunderstorm · North Shore",snow:"Heavy Snow · North Shore",fog:"Dense Fog · visibility drop",dust:"Haboob · wall of dust",tornado:"Tornado · vortex field",front_cold:"Cold Front · passing",front_warm:"Warm Front · passing"},
@@ -559,9 +597,9 @@ const I18N={
   },
   zh:{
     docTitle:"天气现场 · Cesium 真实地球", loading:"加载真实地形中…",
-    note:["真实地球 + 真实地形","粒子密度/风场 ← 预留 HRRR·MRMS 接口","同一引擎覆盖 JetStream 清单"],
+    note:["真实地球 · 真实地形","下方挑一种天气","或点 LIVE 看此刻实况"], sub:"真实地形 · OSM 三维建筑",
     intensity:"强度 Intensity", day:"白天", night:"夜晚",
-    liveIdle:"未连线 · Open-Meteo", liveBtn:"⟳ 实况 LIVE", liveOn:"⏸ 实况 ON", liveLoading:"查询中…", liveFail:"获取失败 · 看 console",
+    liveIdle:"实况未开 · Open-Meteo", liveBtn:"⟳ 实况 LIVE", liveOn:"⏸ 实况 ON", liveLoading:"查询中…", liveFail:"获取失败 · 看 console",
     wind:"风", recenter:"复位到最佳观测角度", front:{cold:"冷锋",warm:"暖锋"},
     pills:{storm:"雷暴",snow:"大雪",fog:"浓雾",dust:"沙尘暴",tornado:"龙卷",front:"锋面"},
     titles:{storm:"雷暴 · 温哥华北岸",snow:"大雪 · 温哥华北岸",fog:"浓雾 · 能见度骤降",dust:"沙尘暴 · 沙墙压境",tornado:"龙卷 · 涡旋风场",front_cold:"冷锋过境",front_warm:"暖锋过境"},
@@ -583,11 +621,11 @@ function applyLang(l){
   document.querySelectorAll('#pills .pill').forEach(p=>{ const k=p.dataset.p;
     p.querySelector('.nm').textContent=t.pills[k]; p.querySelector('.en').textContent=o.pills[k]; });
   document.querySelectorAll('#fronttog button').forEach(b=>{ b.textContent = b.dataset.ft==='cold'?t.front.cold:t.front.warm; });
-  document.getElementById('recenter').title=t.recenter;
+  const rc=document.getElementById('recenter'); rc.title=t.recenter; rc.setAttribute('aria-label',t.recenter);
   updateHead();
   const btn=document.getElementById('liveBtn'); if(!btn.disabled) btn.textContent = liveTimer? t.liveOn : t.liveBtn;
   document.getElementById('liveStat').textContent=liveStatText();
-  document.querySelectorAll('#langtog button').forEach(b=>b.classList.toggle('on',b.dataset.l===l));
+  document.querySelectorAll('#langtog button').forEach(b=>{const on=b.dataset.l===l;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on?'true':'false');});
 }
 
 // 由最近实况 + 当前语言渲染状态行（无实况则显示离线文案）
@@ -601,7 +639,7 @@ function liveStatText(){
 }
 
 function setDayNightUI(d){daynight=d;
-  document.querySelectorAll('#dn button').forEach(x=>x.classList.toggle('on',x.dataset.d===d));}
+  document.querySelectorAll('#dn button').forEach(x=>{const on=x.dataset.d===d;x.classList.toggle('on',on);x.setAttribute('aria-pressed',on?'true':'false');});}
 
 let liveTimer=null;
 const POLL_MS=5*60*1000; // 实况轮询间隔（5 分钟）
